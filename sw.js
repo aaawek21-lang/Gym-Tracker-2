@@ -1,7 +1,8 @@
-const CACHE = 'overload-v1';
+const CACHE = 'overload-v2';
 const ASSETS = [
   './',
   './index.html',
+  './app.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -23,22 +24,23 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  // Network-first for fonts (Google), cache-first for app shell
   if (url.origin === location.origin) {
-    e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
-        return res;
-      }).catch(() => cached))
-    );
-  } else {
+    // Network-first for app shell to get updates faster
     e.respondWith(
       fetch(e.request).then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
         return res;
       }).catch(() => caches.match(e.request))
+    );
+  } else {
+    // Cache-first for external assets (fonts)
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy));
+        return res;
+      }))
     );
   }
 });

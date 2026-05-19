@@ -1,43 +1,79 @@
-# Overload — Gym Tracker PWA
+# Overload — Gym Tracker PWA (v2)
 
 A standalone progressive web app for tracking your gym progression. Works offline, installs to home screen, no Claude required.
 
-## What's in here
+## What's new in v2
 
-- `index.html` — the entire app (HTML/CSS/JS in one file)
+- **Today tab** — recommends which split to train based on muscle recovery (48-72hr per group). Shows status of every muscle: READY, cooking, or fresh.
+- **Live tab** — start a session, log sets one at a time, auto-starts a rest timer after each set with vibration + sound when done. Rest length scales with the lift (180s for compounds, 120s for mid, 75s for isolation).
+- **Export / Import** buttons in the header for backup. Move data between devices, or just keep a backup file in Drive/iCloud.
+
+## Files
+
+- `index.html` — markup + styles
+- `app.js` — all the logic
 - `manifest.json` — PWA metadata
-- `sw.js` — service worker (offline support)
+- `sw.js` — service worker (offline + cache management)
 - `icon-192.png` / `icon-512.png` — app icons
 
-## Deploy with GitHub Pages (free, ~10 min)
+## How to update an already-deployed PWA
 
-1. **Create a GitHub account** at github.com if you don't have one.
-2. **Create a new repo**: click `+` → New repository. Name it whatever (e.g. `overload`). Make it **Public**. Don't add a README.
-3. **Upload all 5 files**: on the repo page, click "uploading an existing file" → drag all 5 files in → Commit.
-4. **Enable Pages**: Settings tab → Pages (left sidebar) → Source: "Deploy from a branch" → Branch: `main` → `/ (root)` → Save.
-5. **Wait ~1 minute**, then refresh that Pages settings screen. You'll see a URL like `https://yourusername.github.io/overload/`.
-6. **Open that URL on your phone** in Chrome (Android) or Safari (iOS).
+If you already have v1 deployed to GitHub Pages:
+
+1. In your repo, **delete** the old `index.html`.
+2. **Upload all 5 files from this update** (index.html, app.js, manifest.json, sw.js, and the icons if you want — they're unchanged).
+3. Commit. Pages redeploys in ~1 minute.
+4. On your phone, **close the app completely** (swipe it away) and reopen. The service worker bumped from v1 to v2 will fetch the new version and drop the old cache. Your data stays intact.
+
+If the app still looks old after reopening, force a refresh: in Chrome on Android, tap the three-dot menu → Settings → Site settings → All sites → find your GitHub Pages URL → Clear & reset. Then reopen. On iOS Safari, settings → Safari → Advanced → Website Data → find the site → swipe to delete. Your localStorage data lives separately under your iOS app container and won't be affected if you've added to home screen.
+
+**Future updates:** any time you push a code change, bump `CACHE = 'overload-v2'` in `sw.js` to `v3`, `v4`, etc. This forces the SW to clear the old cache so users see your changes.
+
+## How to do a fresh deploy (if you haven't yet)
+
+1. Make a free GitHub account at github.com.
+2. New repo (any name, **Public**, no README).
+3. Upload all 6 files (5 + this README).
+4. Settings → Pages → Source: "Deploy from a branch" → main → / (root) → Save.
+5. Wait a minute, then open the URL shown in Pages settings on your phone.
 
 ## Install to home screen
 
-**iOS (Safari)**: tap the Share icon → "Add to Home Screen" → Add.
+**iOS Safari:** Share → "Add to Home Screen" → Add.
+**Android Chrome:** look for the "Install" banner in the app, or three-dot menu → "Install app".
 
-**Android (Chrome)**: you'll see the "Install" banner inside the app. Or tap the three-dot menu → "Install app" / "Add to Home Screen".
+## Backup your data
 
-Once installed it opens like a native app, works offline, and your data persists in your phone's local storage.
+The Export button downloads a JSON file with all your sessions. Save it to Drive, iCloud, email it to yourself, etc. The Import button restores from a JSON file — choose REPLACE (wipe and replace) or MERGE (keep current + add new sessions).
 
-## A note on your data
+Recommend exporting every couple of weeks. It's a 5-second tap.
 
-All data lives in your browser's localStorage on the device you use. It's not synced anywhere. If you clear browser data or uninstall the app, you lose your history.
+## Live session — how it works
 
-If you want backup, you can periodically copy the data: open the app in a desktop browser, open DevTools console, run `copy(localStorage.getItem('overload:v1'))`, paste somewhere safe.
+1. Tap **Live** tab.
+2. Tap one of your past splits (or create a custom one). If you tap "Legs", it auto-loads the exercises from your last Legs session.
+3. For each exercise, enter weight + reps, tap **+ Set**. Timer auto-starts.
+4. Timer vibrates + beeps when rest is up. Hit +15/−15 to adjust on the fly.
+5. Tap **Finish & Save** when done — session goes into your history.
 
-I can add an export/import button later if you want.
+The recommended target above each exercise comes from your progressive overload logic (same as the Plan tab).
 
-## Your seed data
+## Recovery logic
 
-Your 7 sessions from the notes app are preloaded on first launch.
+Each exercise maps to muscle groups. Each muscle has a recovery window:
 
-## To update the app later
+- Quads, Hams, Lower Back: 72hr
+- Chest, Lats, Upper Back, Glutes: 60hr
+- Delts, Biceps, Triceps, Traps, Calves: 48hr
+- Abs: 36hr
 
-Edit `index.html` locally, push the change to the same repo (drag to replace), wait a minute for Pages to redeploy. Your data stays put because it lives on your phone, not the server.
+After your last training session for a muscle, it goes through three phases: **fresh** (recently hit, don't train), **cooking** (60%+ recovered, probably fine), **ready** (fully recovered, go).
+
+The Today recommendation picks the split with the most ready muscles and fewest fresh ones, with a slight tiebreaker for splits you haven't done in a while.
+
+## Limits to know
+
+- Data is **device-local**. Export regularly.
+- Timer keeps running while the tab is open. If you fully close the app, it'll resume correctly when you reopen (state is persisted).
+- Wake lock keeps the screen on during a live session on most browsers.
+- Audio needs one user tap to "unlock" (browser security). The first time you log a set, you've unlocked it for the session.
